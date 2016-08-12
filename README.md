@@ -22,6 +22,14 @@ Benchmark server for 1s with max 10 concurrently running requests
 
     benchttp -d 1s -c 10 http://localhost:8080
 
+## Options
+
+* `-c max-concurrent-requests`
+* `-d duration`
+* `-n max-number-of-requests`
+* `-v` print errors and their frequencies
+* `-i` do HEAD requests instead of GET (default true)
+
 ## Licence
 
 MIT
