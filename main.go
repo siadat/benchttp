@@ -74,7 +74,8 @@ func queueRequests() {
 	var sentReq *http.Request
 	var err error
 	for {
-		if (*flagDuration != 0 && time.Since(start) >= *flagDuration) || (*flagNumber != 0 && reqSentCount >= *flagNumber) {
+		if (*flagDuration != 0 && time.Since(start) >= *flagDuration) ||
+			(*flagNumber != 0 && reqSentCount >= *flagNumber) {
 			close(requests)
 			break
 		}
