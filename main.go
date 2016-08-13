@@ -36,10 +36,26 @@ var (
 	flagAuth        = flag.String("u", "", "huser:pass")
 	flagHead        = flag.Bool("i", false, "do HEAD requests instead of GET")
 	flagNumber      = flag.Int("n", 0, "max number of requests")
+	flagHeaders     = make(flagHeaderMap)
 	flagVerbose     = flag.Bool("v", false, "print errors and their frequencies")
 	flagDuration    = flag.Duration("d", 0, "max benchmark duration")
 	flagConcurrency = flag.Int("c", 1, "max concurrent requests")
 )
+
+type flagHeaderMap map[string]string
+
+func (h *flagHeaderMap) String() string {
+	return "string representation"
+}
+
+func (h *flagHeaderMap) Set(value string) error {
+	keyVal := strings.SplitN(value, ":", 2)
+	if len(keyVal) != 2 {
+		return nil
+	}
+	(*h)[keyVal[0]] = keyVal[1]
+	return nil
+}
 
 // queueRequests creates requests and sends them to the requests channel. It
 // stops creating requests after flagDuration or flagNumber is reached.
@@ -61,6 +77,10 @@ func queueRequests() {
 
 		if err != nil {
 			log.Fatal("NewRequest:", err)
+		}
+
+		for key, value := range flagHeaders {
+			sentReq.Header.Add(key, value)
 		}
 
 		if *flagAuth != "" {
@@ -123,6 +143,7 @@ func main() {
 		log.Printf("Usage: %s [-n 1000] [-d 1s] [-c 1] [-v] [-i] http[s]://host[:port]/path", os.Args[0])
 		flag.PrintDefaults()
 	}
+	flag.Var(&flagHeaders, "H", "custom header separated by a colon, e.g. 'Key: Value'")
 	flag.Parse()
 
 	if *flagDuration == 0 && *flagNumber == 0 {
