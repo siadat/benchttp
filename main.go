@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
+	"strings"
 	"sync"
 	"time"
 )
@@ -28,7 +30,8 @@ var (
 	statusCodeCounts = make(map[int]int)
 	errorsCount      = make(map[string]int)
 
-	flagURL         = ""
+	flagURL *url.URL
+
 	flagHead        = flag.Bool("i", false, "do HEAD requests instead of GET")
 	flagNumber      = flag.Int("n", 0, "max number of requests")
 	flagVerbose     = flag.Bool("v", false, "print errors and their frequencies")
@@ -52,7 +55,7 @@ func queueRequests() {
 			break
 		}
 
-		sentReq, err = http.NewRequest(method, flagURL, nil)
+		sentReq, err = http.NewRequest(method, flagURL.String(), nil)
 
 		if err != nil {
 			log.Fatal("NewRequest:", err)
@@ -119,7 +122,16 @@ func main() {
 		log.Fatal("Specify a URL")
 	}
 
-	flagURL = flag.Args()[0]
+	u := flag.Args()[0]
+	if !strings.HasPrefix(u, "http") {
+		u = "http://" + u
+	}
+
+	var err error
+	flagURL, err = url.Parse(u)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// requests is used to queue requests
 	requests = make(chan *http.Request, *flagConcurrency-1)
