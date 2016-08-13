@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -108,8 +109,10 @@ func sendRequests() {
 }
 
 func main() {
+	log.SetFlags(0)
+
 	flag.Usage = func() {
-		fmt.Println(`Usage: benchttp [-n 1000] [-d 1s] [-c 1] [-v] [-i] http[s]://host[:port]/path`)
+		log.Printf("Usage: %s [-n 1000] [-d 1s] [-c 1] [-v] [-i] http[s]://host[:port]/path", os.Args[0])
 		flag.PrintDefaults()
 	}
 	flag.Parse()
@@ -142,6 +145,7 @@ func main() {
 
 	start = time.Now()
 
+	log.SetFlags(log.LstdFlags)
 	go queueRequests()
 	sendRequests()
 
@@ -155,7 +159,7 @@ func main() {
 	fmt.Printf("   Errors: %d (%%%0.0f)\n", reqErrCount, 100*float32(reqErrCount)/float32(reqDoneCount))
 	fmt.Printf("Responses: %d (%0.1f/s)\n", resTotal, float64(resTotal)/duration.Seconds())
 	for code, count := range statusCodeCounts {
-		fmt.Printf("      %d: %d (%%%0.1f)\n", code, count, 100*float32(count)/float32(resTotal))
+		fmt.Printf("    [%d]: %d (%%%0.1f)\n", code, count, 100*float32(count)/float32(resTotal))
 	}
 	if *flagVerbose {
 		for err, count := range errorsCount {
