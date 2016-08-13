@@ -30,6 +30,6 @@ Benchmark server for 1s with max 10 concurrently running requests
 * `-v` print errors and their frequencies
 * `-i` do HEAD requests instead of GET (default true)
 
-## Licence
+## License
 
 MIT
