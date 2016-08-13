@@ -29,7 +29,7 @@ var (
 	errorsCount      = make(map[string]int)
 
 	flagURL         = ""
-	flagHead        = flag.Bool("i", true, "do HEAD requests instead of GET")
+	flagHead        = flag.Bool("i", false, "do HEAD requests instead of GET")
 	flagNumber      = flag.Int("n", 0, "max number of requests")
 	flagVerbose     = flag.Bool("v", false, "print errors and their frequencies")
 	flagDuration    = flag.Duration("d", 0, "max benchmark duration")
