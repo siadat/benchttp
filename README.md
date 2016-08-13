@@ -29,6 +29,7 @@ Benchmark server for 1s with max 10 concurrently running requests
 * `-n max-number-of-requests`
 * `-v` print errors and their frequencies
 * `-i` do HEAD requests instead of GET (default true)
+* `-u` supply basic authentication, e.g. admin:pass
 
 ## License
 

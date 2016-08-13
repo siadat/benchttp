@@ -33,6 +33,7 @@ var (
 
 	flagURL *url.URL
 
+	flagAuth        = flag.String("u", "", "huser:pass")
 	flagHead        = flag.Bool("i", false, "do HEAD requests instead of GET")
 	flagNumber      = flag.Int("n", 0, "max number of requests")
 	flagVerbose     = flag.Bool("v", false, "print errors and their frequencies")
@@ -60,6 +61,13 @@ func queueRequests() {
 
 		if err != nil {
 			log.Fatal("NewRequest:", err)
+		}
+
+		if *flagAuth != "" {
+			userPass := strings.SplitN(*flagAuth, ":", 2)
+			if len(userPass) == 2 {
+				sentReq.SetBasicAuth(userPass[0], userPass[1])
+			}
 		}
 
 		requests <- sentReq
