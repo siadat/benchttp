@@ -30,9 +30,9 @@ Benchmark server for 1s with max 10 concurrently running requests
 * `-d duration`
 * `-n max-number-of-requests`
 * `-v` print errors and their frequencies
-* `-i` do HEAD requests instead of GET (default true)
+* `-i` do HEAD requests instead of GET
 * `-u` supply basic authentication, e.g. `admin:pass`
-* `-H` custom header(s), e.g. `key: value`
+* `-H` custom header, e.g. `key: value`
 
 ## License
 
