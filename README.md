@@ -26,13 +26,13 @@ Benchmark server for 1s with max 10 concurrently running requests
 
 ## Options
 
-* `-c max-concurrent-requests`
-* `-d duration`
+* `-d duration`, e.g. `-d 10s`
 * `-n max-number-of-requests`
-* `-v` print errors and their frequencies
+* `-c max-concurrent-requests`
+* `-u admin:pass` supply basic authentication
+* `-H "key: value"` custom header
 * `-i` do HEAD requests instead of GET
-* `-u` supply basic authentication, e.g. `admin:pass`
-* `-H` custom header, e.g. `key: value`
+* `-v` print errors and their frequencies
 
 ## License
 
