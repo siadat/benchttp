@@ -1,10 +1,12 @@
 # benchttp
 
 Benchttp implements the most commonly used features of `ab`.
+This project is under active development and its behavior might changes.
+File an issue if you've found a bug.
 
 ## Install
 
-    go get github.com/siadat/benchttp
+    go get -u github.com/siadat/benchttp
 
 ## Usage
 
