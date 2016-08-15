@@ -28,8 +28,6 @@ var (
 	// the max specified by flagConcurrency.
 	runnings chan bool
 
-	defaultClientTimeoutLock sync.RWMutex
-
 	lockCodes        sync.RWMutex
 	statusCodeCounts = make(map[int]int)
 
@@ -133,9 +131,7 @@ func sendRequests() {
 				if d < 1000*time.Millisecond {
 					d = 1000 * time.Millisecond
 				}
-				defaultClientTimeoutLock.Lock()
 				http.DefaultClient.Timeout = d
-				defaultClientTimeoutLock.Unlock()
 			}
 
 			res, err := http.DefaultClient.Do(req)
@@ -217,8 +213,8 @@ func main() {
 	}
 
 	fmt.Printf(" Duration: %0.3fs\n", duration.Seconds())
-	fmt.Printf(" Requests: %d (%0.1f/s)\n", atomic.LoadUint64(&reqDoneCount), float64(atomic.LoadUint64(&reqDoneCount))/duration.Seconds())
-	fmt.Printf("   Errors: %d (%%%0.0f)\n", atomic.LoadUint64(&reqErrCount), 100*float32(atomic.LoadUint64(&reqErrCount))/float32(atomic.LoadUint64(&reqDoneCount)))
+	fmt.Printf(" Requests: %d (%0.1f/s)\n", reqDoneCount, float64(reqDoneCount)/duration.Seconds())
+	fmt.Printf("   Errors: %d (%%%0.0f)\n", reqErrCount, 100*float32(reqErrCount)/float32(reqDoneCount))
 	fmt.Printf("Responses: %d (%0.1f/s)\n", resTotal, float64(resTotal)/duration.Seconds())
 	for code, count := range statusCodeCounts {
 		fmt.Printf("    [%d]: %d (%%%0.1f)\n", code, count, 100*float32(count)/float32(resTotal))
