@@ -17,23 +17,28 @@ import (
 )
 
 var (
-	start        time.Time
-	reqErrCount  uint64
+	// startTime is set at the beginning of the benchmark.
+	startTime time.Time
+
+	// reqErrCount indicates the number of errors.
+	reqErrCount uint64
+
+	// reqDoneCount indicates the number of received responses in the
+	// benchmarking time.
 	reqDoneCount uint64
 
+	// wg for running requests
 	wg sync.WaitGroup
 
-	// runnings is used to limit the number of concurrently running requests to
-	// the max specified by flagConcurrency.
-	runnings chan bool
+	// idleClients limits the number of concurrently running requests to the
+	// number specified by flagConcurrency.
+	idleClients chan *http.Client
 
 	lockCodes   sync.RWMutex
 	statusCodes = make(map[int]int)
 
 	lockErr  sync.RWMutex
 	errCount = make(map[string]int)
-
-	argURL *url.URL
 
 	flagAuth        = flag.String("u", "", "huser:pass")
 	flagHead        = flag.Bool("i", false, "do HEAD requests instead of GET")
@@ -42,6 +47,8 @@ var (
 	flagVerbose     = flag.Bool("v", false, "print errors and their frequencies")
 	flagDuration    = flag.Duration("d", 0, "max benchmark duration")
 	flagConcurrency = flag.Int("c", 1, "max concurrent requests")
+
+	argURL *url.URL
 )
 
 type flagHeaderMap map[string]string
@@ -60,7 +67,7 @@ func (h flagHeaderMap) Set(value string) error {
 }
 
 func isDurationOver() bool {
-	return *flagDuration != 0 && time.Since(start) > *flagDuration
+	return *flagDuration != 0 && time.Since(startTime) > *flagDuration
 }
 
 func newRequest() (req *http.Request) {
@@ -90,12 +97,13 @@ func newRequest() (req *http.Request) {
 
 func send(c *http.Client) {
 	defer func() {
-		<-runnings
+		// send client back to idleClients.
+		idleClients <- c
 		wg.Done()
 	}()
 
 	if *flagDuration > 0 {
-		c.Timeout = *flagDuration - time.Since(start)
+		c.Timeout = *flagDuration - time.Since(startTime)
 	}
 
 	res, err := c.Do(newRequest())
@@ -105,6 +113,7 @@ func send(c *http.Client) {
 			io.Copy(ioutil.Discard, res.Body)
 			res.Body.Close()
 		}
+		// ignore this response because it was received too late.
 		return
 	}
 
@@ -128,26 +137,31 @@ func send(c *http.Client) {
 	lockCodes.Unlock()
 }
 
-// sendRequests create requests and sends them. The max number
-// of running requests is limited by flagConcurrency. It returns after all
-// requests are completed.
+// createClients creates flagConcurrency clients for sending requests.
+func createClients() {
+	for i := 0; i < *flagConcurrency; i++ {
+		idleClients <- &http.Client{
+			CheckRedirect: func(*http.Request, []*http.Request) error {
+				return fmt.Errorf("no redirects")
+			},
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true,
+				},
+				DisableCompression: true,
+				DisableKeepAlives:  false,
+			},
+		}
+	}
+}
+
+// sendRequests creates clients and sends requests with them. The max number of
+// running clients is limited by flagConcurrency.
 func sendRequests() {
 	defer wg.Wait()
-
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-			DisableCompression: true,
-			DisableKeepAlives:  false,
-		},
-	}
-
 	for n := uint64(0); (*flagNumber == 0 || *flagNumber > n) && !isDurationOver(); n++ {
 		wg.Add(1)
-		go send(client)
-		runnings <- true
+		go send(<-idleClients)
 	}
 }
 
@@ -171,7 +185,7 @@ func main() {
 	}
 
 	if flag.NArg() < 1 {
-		log.Fatal("URL not given.")
+		log.Fatal("URL missing")
 	}
 
 	u := flag.Args()[0]
@@ -186,11 +200,12 @@ func main() {
 	}
 	log.SetFlags(log.LstdFlags)
 
-	runnings = make(chan bool, *flagConcurrency-1)
+	idleClients = make(chan *http.Client, *flagConcurrency)
 
-	start = time.Now()
+	createClients()
+	startTime = time.Now()
 	sendRequests()
-	elapsed := time.Since(start)
+	elapsed := time.Since(startTime)
 
 	resTotal := 0
 	for i := range statusCodes {
@@ -199,12 +214,12 @@ func main() {
 
 	fmt.Printf(" Duration: %0.3fs\n", elapsed.Seconds())
 	fmt.Printf(" Requests: %d (%0.1f/s)\n", reqDoneCount, float64(reqDoneCount)/elapsed.Seconds())
-	if reqDoneCount > 0 {
-		fmt.Printf("   Errors: %d (%%%0.0f)\n", reqErrCount, 100*float32(reqErrCount)/float32(reqDoneCount))
+	if *flagVerbose || reqErrCount > 0 {
+		fmt.Printf("   Errors: %d\n", reqErrCount)
 	}
 	fmt.Printf("Responses: %d (%0.1f/s)\n", resTotal, float64(resTotal)/elapsed.Seconds())
 	for code, count := range statusCodes {
-		fmt.Printf("    [%d]: %d (%%%0.1f)\n", code, count, 100*float32(count)/float32(resTotal))
+		fmt.Printf("    [%d]: %d\n", code, count)
 	}
 	if *flagVerbose {
 		for err, count := range errCount {
