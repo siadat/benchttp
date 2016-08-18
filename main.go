@@ -137,7 +137,7 @@ func send(c *http.Client) {
 	lockCodes.Unlock()
 }
 
-// createClients creates flagConcurrency clients for sending requests.
+// createClients creates flagConcurrency idle clients.
 func createClients() {
 	for i := 0; i < *flagConcurrency; i++ {
 		idleClients <- &http.Client{
@@ -155,8 +155,9 @@ func createClients() {
 	}
 }
 
-// sendRequests creates clients and sends requests with them. The max number of
-// running clients is limited by flagConcurrency.
+// sendRequests receives idle clients and sends a request with each one until
+// either benchmark duration is over or flagNumber requests are sent.
+// sendRequests returns after all requests are completed.
 func sendRequests() {
 	defer wg.Wait()
 	for n := uint64(0); (*flagNumber == 0 || *flagNumber > n) && !isDurationOver(); n++ {
@@ -176,7 +177,7 @@ func main() {
 	flag.Parse()
 
 	if *flagDuration == 0 && *flagNumber == 0 {
-		// flagNumber defaults to 1000 if neither -n nor -d are given
+		// assume -n 1000 if neither -n nor -d are given.
 		*flagNumber = 1000
 	}
 
