@@ -1,8 +1,10 @@
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -15,24 +17,21 @@ import (
 )
 
 var (
-	start time.Time
+	start        time.Time
+	reqErrCount  uint64
+	reqDoneCount uint64
 
-	reqErrCount    uint64
-	reqDoneCount   uint64
-	reqQueuedCount uint64
-
-	// reqQueue is used to queue requests
-	reqQueue chan *http.Request
+	wg sync.WaitGroup
 
 	// runnings is used to limit the number of concurrently running requests to
 	// the max specified by flagConcurrency.
 	runnings chan bool
 
-	lockCodes        sync.RWMutex
-	statusCodeCounts = make(map[int]int)
+	lockCodes   sync.RWMutex
+	statusCodes = make(map[int]int)
 
-	lockErrors  sync.RWMutex
-	errorsCount = make(map[string]int)
+	lockErr  sync.RWMutex
+	errCount = make(map[string]int)
 
 	flagURL *url.URL
 
@@ -64,10 +63,7 @@ func isDurationOver() bool {
 	return *flagDuration != 0 && time.Since(start) > *flagDuration
 }
 
-// queueRequests creates requests and sends them to the reqQueue channel. It
-// stops creating requests after flagDuration or flagNumber is reached.
-func queueRequests() {
-	var req *http.Request
+func newRequest() (req *http.Request) {
 	var err error
 	method := "GET"
 	if *flagHead {
@@ -75,7 +71,6 @@ func queueRequests() {
 	}
 
 	req, err = http.NewRequest(method, flagURL.String(), nil)
-
 	if err != nil {
 		log.Fatal("NewRequest:", err)
 	}
@@ -90,78 +85,75 @@ func queueRequests() {
 			req.SetBasicAuth(userPass[0], userPass[1])
 		}
 	}
-
-	for {
-		if isDurationOver() || (*flagNumber != 0 && reqQueuedCount == *flagNumber) {
-			close(reqQueue)
-			break
-		}
-		reqQueue <- req
-		reqQueuedCount++
-	}
+	return req
 }
 
-// sendRequests receives from reqQueue channel and sends them. The max number
+func send(c *http.Client) {
+	defer func() {
+		<-runnings
+		wg.Done()
+	}()
+
+	if *flagDuration > 0 {
+		c.Timeout = *flagDuration - time.Since(start)
+	}
+
+	res, err := c.Do(newRequest())
+
+	if isDurationOver() {
+		if err == nil {
+			io.Copy(ioutil.Discard, res.Body)
+			res.Body.Close()
+		}
+		return
+	}
+
+	atomic.AddUint64(&reqDoneCount, 1)
+
+	if err != nil {
+		atomic.AddUint64(&reqErrCount, 1)
+		if *flagVerbose {
+			lockErr.Lock()
+			errCount[err.Error()]++
+			lockErr.Unlock()
+		}
+		return
+	} else {
+		io.Copy(ioutil.Discard, res.Body)
+		res.Body.Close()
+	}
+
+	lockCodes.Lock()
+	statusCodes[res.StatusCode]++
+	lockCodes.Unlock()
+}
+
+// sendRequests create requests and sends them. The max number
 // of running requests is limited by flagConcurrency. It returns after all
 // requests are completed.
 func sendRequests() {
-	reqCompleted := make(chan bool)
-	var reqCount uint64 = 0
+	defer wg.Wait()
 
-	defer func() {
-		for i := uint64(0); i < reqCount; i++ {
-			<-reqCompleted
-		}
-	}()
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+			DisableCompression: true,
+			DisableKeepAlives:  false,
+		},
+	}
 
-	for req := range reqQueue {
-		if isDurationOver() {
-			return
+	reqCount := uint64(0)
+	for {
+		if (*flagNumber != 0 && reqCount == *flagNumber) || isDurationOver() {
+			break
 		}
 
 		reqCount++
-		go func(req *http.Request) {
-			defer func() {
-				<-runnings
-				reqCompleted <- true
-			}()
+		wg.Add(1)
 
-			if *flagDuration > 0 {
-				d := *flagDuration - time.Since(start)
-				if d < 1000*time.Millisecond {
-					d = 1000 * time.Millisecond
-				}
-				http.DefaultClient.Timeout = d
-			}
-
-			res, err := http.DefaultClient.Do(req)
-
-			if isDurationOver() {
-				if err == nil {
-					res.Body.Close()
-				}
-				return
-			}
-
-			atomic.AddUint64(&reqDoneCount, 1)
-
-			if err != nil {
-				atomic.AddUint64(&reqErrCount, 1)
-				if *flagVerbose {
-					lockErrors.Lock()
-					errorsCount[err.Error()]++
-					lockErrors.Unlock()
-				}
-				return
-			}
-
-			ioutil.ReadAll(res.Body)
-			res.Body.Close()
-
-			lockCodes.Lock()
-			statusCodeCounts[res.StatusCode]++
-			lockCodes.Unlock()
-		}(req)
+		go send(client)
 
 		runnings <- true
 	}
@@ -174,11 +166,11 @@ func main() {
 		log.Printf("Usage: %s [-n 1000] [-d 1s] [-c 1] [-v] [-i] http[s]://host[:port]/path", os.Args[0])
 		flag.PrintDefaults()
 	}
-	flag.Var(&flagHeaders, "H", "custom header separated by a colon, e.g. 'Key: Value'")
+	flag.Var(&flagHeaders, "H", "custom header, e.g. 'Key: Value'")
 	flag.Parse()
 
 	if *flagDuration == 0 && *flagNumber == 0 {
-		// default to -n 1000 if neither -n nor -d are given
+		// flagNumber defaults to 1000 if neither -n nor -d are given
 		*flagNumber = 1000
 	}
 
@@ -198,31 +190,28 @@ func main() {
 	}
 	log.SetFlags(log.LstdFlags)
 
-	reqQueue = make(chan *http.Request, 1000)
 	runnings = make(chan bool, *flagConcurrency-1)
 
 	start = time.Now()
-
-	go queueRequests()
 	sendRequests()
+	elapsed := time.Since(start)
 
-	duration := time.Since(start)
 	resTotal := 0
-	for i := range statusCodeCounts {
-		resTotal += statusCodeCounts[i]
+	for i := range statusCodes {
+		resTotal += statusCodes[i]
 	}
 
-	fmt.Printf(" Duration: %0.3fs\n", duration.Seconds())
-	fmt.Printf(" Requests: %d (%0.1f/s)\n", reqDoneCount, float64(reqDoneCount)/duration.Seconds())
+	fmt.Printf(" Duration: %0.3fs\n", elapsed.Seconds())
+	fmt.Printf(" Requests: %d (%0.1f/s)\n", reqDoneCount, float64(reqDoneCount)/elapsed.Seconds())
 	if reqDoneCount > 0 {
 		fmt.Printf("   Errors: %d (%%%0.0f)\n", reqErrCount, 100*float32(reqErrCount)/float32(reqDoneCount))
 	}
-	fmt.Printf("Responses: %d (%0.1f/s)\n", resTotal, float64(resTotal)/duration.Seconds())
-	for code, count := range statusCodeCounts {
+	fmt.Printf("Responses: %d (%0.1f/s)\n", resTotal, float64(resTotal)/elapsed.Seconds())
+	for code, count := range statusCodes {
 		fmt.Printf("    [%d]: %d (%%%0.1f)\n", code, count, 100*float32(count)/float32(resTotal))
 	}
 	if *flagVerbose {
-		for err, count := range errorsCount {
+		for err, count := range errCount {
 			fmt.Printf("\n%d times:\n%s\n", count, err)
 		}
 	}
