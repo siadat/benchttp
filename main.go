@@ -33,11 +33,11 @@ var (
 	lockErr  sync.RWMutex
 	errCount = make(map[string]int)
 
-	flagURL *url.URL
+	argURL *url.URL
 
 	flagAuth        = flag.String("u", "", "huser:pass")
 	flagHead        = flag.Bool("i", false, "do HEAD requests instead of GET")
-	flagNumber      = flag.Uint64("n", 0, "max number of requests")
+	flagNumber      = flag.Uint64("n", 0, "number of requests")
 	flagHeaders     = make(flagHeaderMap)
 	flagVerbose     = flag.Bool("v", false, "print errors and their frequencies")
 	flagDuration    = flag.Duration("d", 0, "max benchmark duration")
@@ -70,7 +70,7 @@ func newRequest() (req *http.Request) {
 		method = "HEAD"
 	}
 
-	req, err = http.NewRequest(method, flagURL.String(), nil)
+	req, err = http.NewRequest(method, argURL.String(), nil)
 	if err != nil {
 		log.Fatal("NewRequest:", err)
 	}
@@ -144,17 +144,9 @@ func sendRequests() {
 		},
 	}
 
-	reqCount := uint64(0)
-	for {
-		if (*flagNumber != 0 && reqCount == *flagNumber) || isDurationOver() {
-			break
-		}
-
-		reqCount++
+	for n := uint64(0); (*flagNumber == 0 || *flagNumber > n) && !isDurationOver(); n++ {
 		wg.Add(1)
-
 		go send(client)
-
 		runnings <- true
 	}
 }
@@ -174,8 +166,12 @@ func main() {
 		*flagNumber = 1000
 	}
 
+	if *flagDuration > 0 && *flagNumber > 0 {
+		log.Fatal("Do not set both -d and -n.")
+	}
+
 	if flag.NArg() < 1 {
-		log.Fatal("Specify a URL")
+		log.Fatal("URL not given.")
 	}
 
 	u := flag.Args()[0]
@@ -184,7 +180,7 @@ func main() {
 	}
 
 	var err error
-	flagURL, err = url.Parse(u)
+	argURL, err = url.Parse(u)
 	if err != nil {
 		log.Fatal(err)
 	}

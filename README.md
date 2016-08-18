@@ -29,7 +29,7 @@ Benchmark server for 1s with max 10 concurrently running requests
 ## Options
 
 * `-d duration`, e.g. `-d 10s`
-* `-n max-number-of-requests`
+* `-n number-of-requests`
 * `-c max-concurrent-requests`
 * `-u admin:pass` supply basic authentication
 * `-H "key: value"` custom header
