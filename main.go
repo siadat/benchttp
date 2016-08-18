@@ -47,16 +47,16 @@ var (
 
 type flagHeaderMap map[string]string
 
-func (h *flagHeaderMap) String() string {
+func (h flagHeaderMap) String() string {
 	return "string representation"
 }
 
-func (h *flagHeaderMap) Set(value string) error {
+func (h flagHeaderMap) Set(value string) error {
 	keyVal := strings.SplitN(value, ":", 2)
 	if len(keyVal) != 2 {
 		return nil
 	}
-	(*h)[keyVal[0]] = keyVal[1]
+	h[keyVal[0]] = keyVal[1]
 	return nil
 }
 
