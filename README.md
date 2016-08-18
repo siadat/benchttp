@@ -5,7 +5,6 @@ Benchmarks could be limited by either `-n number-of-requests` or `-d total-durat
 
 **Note**: This project is under active development.
 Issues and pull-requests are welcome.
-Thank you!
 
 ## Install
 
@@ -31,23 +30,20 @@ Benchmark server for 1s with max 10 concurrently running requests
 
 ## Output
 
-The output for
-
     benchttp -n 10000 -c 100 localhost:8080
 
-is
 
      Duration: 2.238s
      Requests: 10000 (4468.7/s)
-       Errors: 0 (%0)
+       Errors: 0
     Responses: 10000 (4468.7/s)
-        [200]: 10000 (%100.0)
+        [200]: 10000
 
 ## Options
 
-* `-d duration`, e.g. `-d 10s`
-* `-n number-of-requests`
-* `-c max-concurrent-requests`
+* `-d duration`, e.g., `-d 10s`
+* `-n number-of-requests`, e.g., `-n 1000`
+* `-c max-concurrent-requests`, e.g. `-c 100`
 * `-u admin:pass` supply basic authentication
 * `-H "key: value"` custom header
 * `-i` do HEAD requests instead of GET
