@@ -30,7 +30,6 @@ Benchmark server for 1s with max 10 concurrently running requests
 
      Duration: 2.238s
      Requests: 10000 (4468.7/s)
-       Errors: 0
     Responses: 10000 (4468.7/s)
         [200]: 10000
 

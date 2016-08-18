@@ -107,12 +107,12 @@ func send(c *http.Client) {
 	}
 
 	res, err := c.Do(newRequest())
+	if err == nil {
+		io.Copy(ioutil.Discard, res.Body)
+		res.Body.Close()
+	}
 
 	if isDurationOver() {
-		if err == nil {
-			io.Copy(ioutil.Discard, res.Body)
-			res.Body.Close()
-		}
 		// ignore this response because it was received too late.
 		return
 	}
@@ -127,9 +127,6 @@ func send(c *http.Client) {
 			lockErr.Unlock()
 		}
 		return
-	} else {
-		io.Copy(ioutil.Discard, res.Body)
-		res.Body.Close()
 	}
 
 	lockCodes.Lock()
@@ -191,6 +188,7 @@ func main() {
 
 	u := flag.Args()[0]
 	if !strings.HasPrefix(u, "http") {
+		// assumes "http://" if scheme is missing.
 		u = "http://" + u
 	}
 
