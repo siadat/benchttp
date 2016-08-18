@@ -1,7 +1,7 @@
 # benchttp
 
-Benchttp implements the most commonly used features of `ab`.
-Benchmarks could be limited by either the number of requests (`-n`) or total duration (`-d`).
+Benchttp implements the most commonly used features of ApacheBench.
+Benchmarks could be limited by either `-n number-of-requests` or `-d total-duration`.
 
 **Note**: This project is under active development and there might be bugs.
 File an issue if you've found one.
