@@ -3,8 +3,8 @@
 Benchttp implements the most commonly used features of ApacheBench.
 Benchmarks could be limited by either `-n number-of-requests` or `-d total-duration`.
 
-**Note**: This project is under active development and there might be bugs.
-File an issue if you've found one.
+**Note**: This project is under active development.
+Issues and pull-requests are welcome.
 Thank you!
 
 ## Install
