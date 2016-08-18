@@ -1,10 +1,8 @@
 # benchttp
 
 Benchttp implements the most commonly used features of ApacheBench.
-Benchmarks could be limited by either `-n number-of-requests` or `-d total-duration`.
 
-**Note**: This project is under active development.
-Issues and pull-requests are welcome.
+Benchmarks are limited with either `-n number-of-requests` or `-d total-duration`.
 
 ## Install
 
@@ -30,9 +28,6 @@ Benchmark server for 1s with max 10 concurrently running requests
 
 ## Output
 
-    benchttp -n 10000 -c 100 localhost:8080
-
-
      Duration: 2.238s
      Requests: 10000 (4468.7/s)
        Errors: 0
@@ -48,6 +43,10 @@ Benchmark server for 1s with max 10 concurrently running requests
 * `-H "key: value"` custom header
 * `-i` do HEAD requests instead of GET
 * `-v` print errors and their frequencies
+
+## Contribute
+
+Issues and pull-requests are welcome.
 
 ## License
 
