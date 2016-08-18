@@ -26,6 +26,20 @@ Benchmark server for 1s with max 10 concurrently running requests
 
     benchttp -d 1s -c 10 http://localhost:8080
 
+## Output
+
+The output for
+
+    benchttp -n 10000 -c 100 localhost:8080
+
+is
+
+     Duration: 2.238s
+     Requests: 10000 (4468.7/s)
+       Errors: 0 (%0)
+    Responses: 10000 (4468.7/s)
+        [200]: 10000 (%100.0)
+
 ## Options
 
 * `-d duration`, e.g. `-d 10s`
