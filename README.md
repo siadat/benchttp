@@ -1,8 +1,11 @@
 # benchttp
 
 Benchttp implements the most commonly used features of `ab`.
-This project is under active development and its behavior might changes.
-File an issue if you've found a bug.
+Benchmarks could be limited by either the number of requests (`-n`) or total duration (`-d`).
+
+**Note**: This project is under active development and there might be bugs.
+File an issue if you've found one.
+Thank you!
 
 ## Install
 
