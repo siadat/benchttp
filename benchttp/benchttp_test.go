@@ -44,10 +44,10 @@ func TestBenchttpDuration(t *testing.T) {
 
 	d := 2 * time.Second
 	b := &benchttp.Benchttp{Concurrency: 1000, Request: req}
-	b.SendDuration(d)
+	r := b.SendDuration(d)
 	okDiff := 100 * time.Millisecond
-	if b.Elapsed()-d > okDiff {
-		t.Errorf("Expected %+v < d < %+v, it lasted for %+v", d, d+okDiff, b.Elapsed())
+	if r.Duration-d > okDiff {
+		t.Errorf("Expected %+v < d < %+v, it lasted for %+v", d, d+okDiff, r.Duration)
 	}
 }
 

@@ -77,15 +77,15 @@ func (b *Benchttp) do() *Report {
 	b.sendRequests()
 	b.end = time.Now()
 	return &Report{
-		Duration:     b.Elapsed(),
+		Duration:     b.elapsed(),
 		RequestCount: b.reqDoneCount,
 		StatusCodes:  b.statusCodes,
 		Errors:       b.errCount,
 	}
 }
 
-// Elapsed is the total benchmarking duration.
-func (b *Benchttp) Elapsed() time.Duration {
+// elapsed is the total benchmarking duration.
+func (b *Benchttp) elapsed() time.Duration {
 	return b.end.Sub(b.start)
 }
 
