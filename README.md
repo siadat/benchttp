@@ -1,4 +1,4 @@
-# benchttp
+# Benchttp
 
 [![GoDoc](https://godoc.org/github.com/siadat/benchttp/benchttp?status.svg)](https://godoc.org/github.com/siadat/benchttp/benchttp)
 [![Build Status](https://travis-ci.org/siadat/benchttp.svg?branch=master)](https://travis-ci.org/siadat/benchttp)
@@ -48,7 +48,11 @@ Benchmark server for 1s with max 10 concurrently running requests
 
 ## Contribute
 
-Issues and pull-requests are welcome.
+Issues and PRs are welcome.
+
+## Thanks
+
+Thanks @Deleplace for testing and reviewing the code.
 
 ## License
 
