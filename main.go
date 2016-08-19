@@ -91,10 +91,8 @@ func main() {
 	if *flagDuration > 0 && *flagNumber > 0 {
 		log.Fatal("Do not set both -d and -n.")
 	} else if *flagDuration > 0 {
-		b.SendDuration(*flagDuration)
+		b.SendDuration(*flagDuration).Print()
 	} else if *flagNumber > 0 {
-		b.SendNumber(*flagNumber)
+		b.SendNumber(*flagNumber).Print()
 	}
-
-	b.PrintReport()
 }

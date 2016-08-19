@@ -1,6 +1,8 @@
 package benchttp_test
 
 import (
+	"fmt"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -9,6 +11,25 @@ import (
 
 	"github.com/siadat/benchttp/benchttp"
 )
+
+func ExampleBenchttp() {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {}))
+	defer s.Close()
+
+	req, err := http.NewRequest("GET", s.URL, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	b := &benchttp.Benchttp{
+		Concurrency: 10,
+		Request:     req,
+	}
+	report := b.SendNumber(10)
+	fmt.Println(report.RequestCount)
+	// Output:
+	// 10
+}
 
 func TestBenchttpDuration(t *testing.T) {
 	count := uint64(0)
@@ -21,10 +42,10 @@ func TestBenchttpDuration(t *testing.T) {
 
 	req, _ := http.NewRequest("GET", s.URL, nil)
 
-	d := 5 * time.Second
+	d := 2 * time.Second
 	b := &benchttp.Benchttp{Concurrency: 1000, Request: req}
 	b.SendDuration(d)
-	okDiff := 50 * time.Millisecond
+	okDiff := 100 * time.Millisecond
 	if b.Elapsed()-d > okDiff {
 		t.Errorf("Expected %+v < d < %+v, it lasted for %+v", d, d+okDiff, b.Elapsed())
 	}

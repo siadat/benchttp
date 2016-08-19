@@ -11,14 +11,13 @@ import (
 	"time"
 )
 
+// Benchttp holds configurations for a benchmark.
 type Benchttp struct {
 	// Concurrency indicates the max number of concurrent requests.
 	Concurrency int
+
 	// Request specifies the request to used in benchmarking.
 	Request *http.Request
-
-	duration time.Duration
-	number   uint64
 
 	// start is set at the beginning of the benchmark.
 	start time.Time
@@ -26,11 +25,14 @@ type Benchttp struct {
 	// end is set after the benchmark is complete.
 	end time.Time
 
+	duration time.Duration
+	number   uint64
+
 	lockCodes   sync.RWMutex
-	StatusCodes map[int]int
+	statusCodes map[int]int
 
 	lockErr  sync.RWMutex
-	ErrCount map[string]int
+	errCount map[string]int
 
 	// idleClients limits the number of concurrently running requests to the
 	// number specified by Concurrency.
@@ -47,25 +49,39 @@ type Benchttp struct {
 	reqDoneCount uint64
 }
 
+// Report is the result of a benchmark.
+type Report struct {
+	Duration     time.Duration
+	RequestCount uint64
+	StatusCodes  map[int]int
+	Errors       map[string]int
+}
+
 // SendNumber starts benchmarking for n requests.
-func (b *Benchttp) SendNumber(n uint64) {
+func (b *Benchttp) SendNumber(n uint64) *Report {
 	b.number = n
-	b.do()
+	return b.do()
 }
 
 // SendNumber starts benchmarking for the d duration.
-func (b *Benchttp) SendDuration(d time.Duration) {
+func (b *Benchttp) SendDuration(d time.Duration) *Report {
 	b.duration = d
-	b.do()
+	return b.do()
 }
 
-func (b *Benchttp) do() {
-	b.StatusCodes = make(map[int]int)
-	b.ErrCount = make(map[string]int)
+func (b *Benchttp) do() *Report {
+	b.statusCodes = make(map[int]int)
+	b.errCount = make(map[string]int)
 	b.createClients()
 	b.start = time.Now()
 	b.sendRequests()
 	b.end = time.Now()
+	return &Report{
+		Duration:     b.Elapsed(),
+		RequestCount: b.reqDoneCount,
+		StatusCodes:  b.statusCodes,
+		Errors:       b.errCount,
+	}
 }
 
 // Elapsed is the total benchmarking duration.
@@ -73,23 +89,30 @@ func (b *Benchttp) Elapsed() time.Duration {
 	return b.end.Sub(b.start)
 }
 
-// PrintReport prints the benchmarking usage.
-func (b *Benchttp) PrintReport() {
+// Print formats the benchmarking report.
+func (r *Report) Print() {
 	resTotal := 0
-	for i := range b.StatusCodes {
-		resTotal += b.StatusCodes[i]
+	for i := range r.StatusCodes {
+		resTotal += r.StatusCodes[i]
 	}
 
-	fmt.Printf(" Duration: %0.3fs\n", b.Elapsed().Seconds())
-	fmt.Printf(" Requests: %d (%0.1f/s)\n", b.reqDoneCount, float64(b.reqDoneCount)/b.Elapsed().Seconds())
-	if b.reqErrCount > 0 {
-		fmt.Printf("   Errors: %d\n", b.reqErrCount)
+	errTotal := 0
+	for i := range r.Errors {
+		errTotal += r.Errors[i]
 	}
-	fmt.Printf("Responses: %d (%0.1f/s)\n", resTotal, float64(resTotal)/b.Elapsed().Seconds())
-	for code, count := range b.StatusCodes {
+
+	fmt.Printf(" Duration: %0.3fs\n", r.Duration.Seconds())
+	fmt.Printf(" Requests: %d (%0.1f/s)\n", r.RequestCount, float64(r.RequestCount)/r.Duration.Seconds())
+
+	if errTotal > 0 {
+		fmt.Printf("   Errors: %d\n", errTotal)
+	}
+
+	fmt.Printf("Responses: %d (%0.1f/s)\n", resTotal, float64(resTotal)/r.Duration.Seconds())
+	for code, count := range r.StatusCodes {
 		fmt.Printf("    [%d]: %d\n", code, count)
 	}
-	for err, count := range b.ErrCount {
+	for err, count := range r.Errors {
 		fmt.Printf("\n%d times:\n%s\n", count, err)
 	}
 }
@@ -121,13 +144,13 @@ func (b *Benchttp) sendOne(c *http.Client) {
 	if err != nil {
 		atomic.AddUint64(&b.reqErrCount, 1)
 		b.lockErr.Lock()
-		b.ErrCount[err.Error()]++
+		b.errCount[err.Error()]++
 		b.lockErr.Unlock()
 		return
 	}
 
 	b.lockCodes.Lock()
-	b.StatusCodes[res.StatusCode]++
+	b.statusCodes[res.StatusCode]++
 	b.lockCodes.Unlock()
 }
 
