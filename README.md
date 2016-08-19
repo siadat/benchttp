@@ -1,6 +1,8 @@
 # benchttp
 
 [![GoDoc](https://godoc.org/github.com/siadat/benchttp/benchttp?status.svg)](https://godoc.org/github.com/siadat/benchttp/benchttp)
+[![Build Status](https://travis-ci.org/siadat/benchttp.svg?branch=master)](https://travis-ci.org/siadat/benchttp)
+
 
 Benchttp implements the most commonly used features of ApacheBench.
 
