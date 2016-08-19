@@ -1,4 +1,4 @@
-package main
+package benchttp
 
 import (
 	"crypto/tls"

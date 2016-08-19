@@ -41,7 +41,6 @@ Benchmark server for 1s with max 10 concurrently running requests
 * `-u admin:pass` supply basic authentication
 * `-H "key: value"` custom header
 * `-i` do HEAD requests instead of GET
-* `-v` print errors and their frequencies
 
 ## Contribute
 

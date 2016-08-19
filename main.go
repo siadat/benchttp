@@ -7,13 +7,14 @@ import (
 	"net/url"
 	"os"
 	"strings"
+
+	"github.com/siadat/benchttp/benchttp"
 )
 
 var (
 	flagAuth        = flag.String("u", "", "huser:pass")
 	flagHead        = flag.Bool("i", false, "do HEAD requests instead of GET")
 	flagNumber      = flag.Uint64("n", 0, "number of requests")
-	flagVerbose     = flag.Bool("v", false, "print errors and their frequencies")
 	flagDuration    = flag.Duration("d", 0, "max benchmark duration")
 	flagConcurrency = flag.Int("c", 1, "max concurrent requests")
 	flagHeaders     = make(colonSeparatedFlags)
@@ -61,7 +62,7 @@ func main() {
 	log.SetFlags(0)
 
 	flag.Usage = func() {
-		log.Printf("Usage: %s [-n 1000] [-d 1s] [-c 1] [-v] [-i] http[s]://host[:port]/path", os.Args[0])
+		log.Printf("Usage: %s [-n 1000] [-d 1s] [-c 1] [-i] http[s]://host[:port]/path", os.Args[0])
 		flag.PrintDefaults()
 	}
 
@@ -77,7 +78,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	b := &Benchttp{
+	b := &benchttp.Benchttp{
 		Concurrency: *flagConcurrency,
 		Request:     newRequest(argURL.String()),
 	}

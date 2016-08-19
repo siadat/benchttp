@@ -1,4 +1,4 @@
-package main
+package benchttp_test
 
 import (
 	"net/http"
@@ -6,6 +6,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/siadat/benchttp/benchttp"
 )
 
 func TestBenchttpDuration(t *testing.T) {
@@ -20,7 +22,7 @@ func TestBenchttpDuration(t *testing.T) {
 	req, _ := http.NewRequest("GET", s.URL, nil)
 
 	d := 5 * time.Second
-	b := &Benchttp{Concurrency: 1000, Request: req}
+	b := &benchttp.Benchttp{Concurrency: 1000, Request: req}
 	b.SendDuration(d)
 	okDiff := 50 * time.Millisecond
 	if b.Elapsed()-d > okDiff {
@@ -40,7 +42,7 @@ func TestBenchttpNumber(t *testing.T) {
 	req, _ := http.NewRequest("GET", s.URL, nil)
 
 	n := uint64(20)
-	b := &Benchttp{Concurrency: 10, Request: req}
+	b := &benchttp.Benchttp{Concurrency: 10, Request: req}
 	b.SendNumber(n)
 	if count != n {
 		t.Errorf("Expected %d requests, received %d", n, count)
