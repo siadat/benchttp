@@ -1,5 +1,7 @@
 # benchttp
 
+[![GoDoc](https://godoc.org/github.com/siadat/benchttp/benchttp?status.svg)](https://godoc.org/github.com/siadat/benchttp/benchttp)
+
 Benchttp implements the most commonly used features of ApacheBench.
 
 Benchmarks are limited with either `-n number-of-requests` or `-d total-duration`.
