@@ -25,8 +25,8 @@ type Benchttp struct {
 	// end is set after the benchmark is complete.
 	end time.Time
 
-	duration time.Duration
-	number   uint64
+	targetDuration time.Duration
+	targetNumber   uint64
 
 	lockCodes   sync.RWMutex
 	statusCodes map[int]int
@@ -41,12 +41,12 @@ type Benchttp struct {
 	// wg for running requests
 	wg sync.WaitGroup
 
-	// reqErrCount indicates the number of errors.
-	reqErrCount uint64
+	// actualReqErrCount indicates the number of errors.
+	actualReqErrCount uint64
 
-	// reqDoneCount indicates the number of received responses in the
+	// actualReqDoneCount indicates the number of received responses in the
 	// benchmarking time.
-	reqDoneCount uint64
+	actualReqDoneCount uint64
 }
 
 // Report is the result of a benchmark.
@@ -59,13 +59,13 @@ type Report struct {
 
 // SendNumber starts benchmarking for n requests.
 func (b *Benchttp) SendNumber(n uint64) *Report {
-	b.number = n
+	b.targetNumber = n
 	return b.do()
 }
 
-// SendNumber starts benchmarking for the d duration.
+// SendDuration starts benchmarking for the d duration.
 func (b *Benchttp) SendDuration(d time.Duration) *Report {
-	b.duration = d
+	b.targetDuration = d
 	return b.do()
 }
 
@@ -78,7 +78,7 @@ func (b *Benchttp) do() *Report {
 	b.end = time.Now()
 	return &Report{
 		Duration:     b.elapsed(),
-		RequestCount: b.reqDoneCount,
+		RequestCount: b.actualReqDoneCount,
 		StatusCodes:  b.statusCodes,
 		Errors:       b.errCount,
 	}
@@ -102,13 +102,21 @@ func (r *Report) Print() {
 	}
 
 	fmt.Printf(" Duration: %0.3fs\n", r.Duration.Seconds())
-	fmt.Printf(" Requests: %d (%0.1f/s)\n", r.RequestCount, float64(r.RequestCount)/r.Duration.Seconds())
+	fmt.Printf(" Requests: %d (%0.1f/s) (%0.5fs/r)\n",
+		r.RequestCount,
+		float64(r.RequestCount)/r.Duration.Seconds(),
+		r.Duration.Seconds()/float64(r.RequestCount),
+	)
 
 	if errTotal > 0 {
 		fmt.Printf("   Errors: %d\n", errTotal)
 	}
 
-	fmt.Printf("Responses: %d (%0.1f/s)\n", resTotal, float64(resTotal)/r.Duration.Seconds())
+	fmt.Printf("Responses: %d (%0.1f/s) (%0.5fs/r)\n",
+		resTotal,
+		float64(resTotal)/r.Duration.Seconds(),
+		r.Duration.Seconds()/float64(resTotal),
+	)
 	for code, count := range r.StatusCodes {
 		fmt.Printf("    [%d]: %d\n", code, count)
 	}
@@ -124,8 +132,8 @@ func (b *Benchttp) sendOne(c *http.Client) {
 		b.wg.Done()
 	}()
 
-	if b.duration > 0 {
-		c.Timeout = b.duration - time.Since(b.start)
+	if b.targetDuration > 0 {
+		c.Timeout = b.targetDuration - time.Since(b.start)
 	}
 
 	res, err := c.Do(b.Request)
@@ -139,10 +147,10 @@ func (b *Benchttp) sendOne(c *http.Client) {
 		return
 	}
 
-	atomic.AddUint64(&b.reqDoneCount, 1)
+	atomic.AddUint64(&b.actualReqDoneCount, 1)
 
 	if err != nil {
-		atomic.AddUint64(&b.reqErrCount, 1)
+		atomic.AddUint64(&b.actualReqErrCount, 1)
 		b.lockErr.Lock()
 		b.errCount[err.Error()]++
 		b.lockErr.Unlock()
@@ -159,14 +167,14 @@ func (b *Benchttp) sendOne(c *http.Client) {
 // sendRequests returns after all requests are completed.
 func (b *Benchttp) sendRequests() {
 	defer b.wg.Wait()
-	for n := uint64(0); (b.number == 0 || b.number > n) && !b.isDurationOver(); n++ {
+	for n := uint64(0); (b.targetNumber == 0 || b.targetNumber > n) && !b.isDurationOver(); n++ {
 		b.wg.Add(1)
 		go b.sendOne(<-b.idleClients)
 	}
 }
 
 func (b *Benchttp) isDurationOver() bool {
-	return b.duration != 0 && time.Since(b.start) > b.duration
+	return b.targetDuration != 0 && time.Since(b.start) > b.targetDuration
 }
 
 // createClients creates Concurrency idle clients.

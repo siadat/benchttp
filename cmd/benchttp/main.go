@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/siadat/benchttp/benchttp"
+	"github.com/siadat/benchttp"
 )
 
 var (
@@ -91,8 +91,10 @@ func main() {
 	if *flagDuration > 0 && *flagNumber > 0 {
 		log.Fatal("Do not set both -d and -n.")
 	} else if *flagDuration > 0 {
-		b.SendDuration(*flagDuration).Print()
+		r := b.SendDuration(*flagDuration)
+		r.Print()
 	} else if *flagNumber > 0 {
-		b.SendNumber(*flagNumber).Print()
+		r := b.SendNumber(*flagNumber)
+		r.Print()
 	}
 }
