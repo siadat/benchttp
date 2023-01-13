@@ -10,7 +10,7 @@ Benchmarks are limited with either `-n number-of-requests` or `-d total-duration
 
 ## Install
 
-    go get -u github.com/siadat/benchttp/cmd/benchmark
+    go install github.com/siadat/benchttp/cmd/benchttp@master
 
 ## Usage
 
